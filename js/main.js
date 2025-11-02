@@ -934,21 +934,187 @@ textureInput.addEventListener('change', (e) => {
 });
 
 // Export hair
-document.getElementById('exportBtn').addEventListener('click', () => {
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  const dlg = document.getElementById('exportDialog');
+  const fmtSel = document.getElementById('exportFormat');
+  const gltfOpts = document.getElementById('gltfOptions');
+  const fbxHint = document.getElementById('fbxHint');
+  if (!dlg || !fmtSel) return;
+
+  // Try to detect whether FBX exporter file exists (best-effort): show hint only when FBX selected
+  const updateVis = () => {
+    const fmt = fmtSel.value;
+    gltfOpts.style.display = (fmt === 'gltf') ? 'flex' : 'none';
+    fbxHint.style.display = (fmt === 'fbx') ? 'block' : 'none';
+  };
+  fmtSel.addEventListener('change', updateVis, { once: true });
+  updateVis();
+
+  dlg.showModal();
+
+  const confirmBtn = document.getElementById('exportConfirmBtn');
+  const onConfirm = async (e) => {
+    e?.preventDefault?.();
+    await performExportFromDialog();
+    dlg.close();
+    confirmBtn.removeEventListener('click', onConfirm);
+  };
+  confirmBtn.addEventListener('click', onConfirm);
+});
+
+async function performExportFromDialog() {
   if (hairGroup.children.length === 0) {
     alert('No hair cards to export.');
     return;
   }
-  const exporter = new GLTFExporter();
-  exporter.parse(hairGroup, (result) => {
-    if (result instanceof ArrayBuffer) {
-      saveArrayBuffer(result, 'hair_cards.glb');
-    } else {
-      const output = JSON.stringify(result, null, 2);
-      saveString(output, 'hair_cards.gltf');
+  const fmt = /** @type {HTMLSelectElement} */(document.getElementById('exportFormat')).value;
+  const onlySel = /** @type {HTMLInputElement} */(document.getElementById('exportOnlySelected')).checked;
+  const onlyVisible = /** @type {HTMLInputElement} */(document.getElementById('exportOnlyVisible')).checked;
+  const embedImages = /** @type {HTMLInputElement} */(document.getElementById('exportEmbedImages')).checked;
+
+  const objToExport = buildExportObject(onlySel);
+
+  if (fmt === 'glb') {
+    const exporter = new GLTFExporter();
+    exporter.parse(objToExport, (result) => {
+      if (result instanceof ArrayBuffer) {
+        saveArrayBuffer(result, 'hair_cards.glb');
+      } else {
+        const output = JSON.stringify(result, null, 2);
+        saveString(output, 'hair_cards.gltf');
+      }
+    }, { binary: true, onlyVisible, embedImages: true });
+  } else if (fmt === 'gltf') {
+    const exporter = new GLTFExporter();
+    exporter.parse(objToExport, (result) => {
+      if (result instanceof ArrayBuffer) {
+        // Should not happen for binary:false, but handle defensively
+        saveArrayBuffer(result, 'hair_cards.glb');
+      } else {
+        const output = JSON.stringify(result, null, 2);
+        saveString(output, 'hair_cards.gltf');
+      }
+    }, { binary: false, onlyVisible, embedImages });
+  } else if (fmt === 'obj') {
+    const objText = exportOBJ(objToExport, { onlyVisible });
+    saveString(objText, 'hair_cards.obj');
+  } else if (fmt === 'fbx') {
+    try {
+      const mod = await import('../vendor/three/examples/jsm/exporters/FBXExporter.js');
+      const FBXExporter = mod.FBXExporter || (mod.default && mod.default.FBXExporter) || mod;
+      const exporter = new FBXExporter();
+      const result = exporter.parse(objToExport);
+      if (result instanceof ArrayBuffer) {
+        saveArrayBuffer(result, 'hair_cards.fbx');
+      } else {
+        saveString(result, 'hair_cards.fbx');
+      }
+    } catch (e) {
+      console.warn('FBXExporter not found or failed to load.', e);
+      alert('FBX export requires vendor/three/examples/jsm/exporters/FBXExporter.js. Please add it to the repo.');
     }
-  }, { binary: true, onlyVisible: true, embedImages: true });
-});
+  }
+}
+
+function buildExportObject(onlySelected) {
+  if (!onlySelected || selectedCards.size === 0) return hairGroup;
+  const g = new THREE.Group();
+  selectedCards.forEach((card) => {
+    const clone = card.clone();
+    clone.matrixWorld.copy(card.matrixWorld);
+    clone.matrix.copy(card.matrix);
+    clone.position.copy(card.position);
+    clone.quaternion.copy(card.quaternion);
+    clone.scale.copy(card.scale);
+    g.add(clone);
+  });
+  return g;
+}
+
+// Minimal OBJ exporter for meshes under a given Object3D
+function exportOBJ(object3D, opts = {}) {
+  const onlyVisible = !!opts.onlyVisible;
+  let output = '';
+  let vertexOffset = 0;
+  const v = new THREE.Vector3();
+  const n = new THREE.Vector3();
+  const uv = new THREE.Vector2();
+
+  object3D.traverse((node) => {
+    if (!node.isMesh || !node.geometry) return;
+    if (onlyVisible && node.visible === false) return;
+    const geometry = node.geometry;
+    const positionAttr = geometry.getAttribute('position');
+    if (!positionAttr) return;
+    const normalAttr = geometry.getAttribute('normal');
+    const uvAttr = geometry.getAttribute('uv');
+
+    node.updateWorldMatrix(true, false);
+    const normalMatrix = new THREE.Matrix3().getNormalMatrix(node.matrixWorld);
+
+    const vertCount = positionAttr.count;
+
+    output += `o ${node.name || 'Mesh'}\n`;
+
+    // Vertices
+    for (let i = 0; i < vertCount; i++) {
+      v.fromBufferAttribute(positionAttr, i).applyMatrix4(node.matrixWorld);
+      output += `v ${v.x} ${v.y} ${v.z}\n`;
+    }
+
+    // UVs (optional)
+    if (uvAttr) {
+      for (let i = 0; i < uvAttr.count; i++) {
+        uv.fromBufferAttribute(uvAttr, i);
+        output += `vt ${uv.x} ${uv.y}\n`;
+      }
+    }
+
+    // Normals (optional)
+    if (normalAttr) {
+      for (let i = 0; i < normalAttr.count; i++) {
+        n.fromBufferAttribute(normalAttr, i).applyMatrix3(normalMatrix).normalize();
+        output += `vn ${n.x} ${n.y} ${n.z}\n`;
+      }
+    }
+
+    const index = geometry.getIndex();
+    // Faces
+    const faceHasUV = !!uvAttr;
+    const faceHasNormal = !!normalAttr;
+
+    const makeFace = (a, b, c) => {
+      const ia = a + 1 + vertexOffset;
+      const ib = b + 1 + vertexOffset;
+      const ic = c + 1 + vertexOffset;
+      if (faceHasUV && faceHasNormal) {
+        output += `f ${ia}/${ia}/${ia} ${ib}/${ib}/${ib} ${ic}/${ic}/${ic}\n`;
+      } else if (faceHasUV && !faceHasNormal) {
+        output += `f ${ia}/${ia} ${ib}/${ib} ${ic}/${ic}\n`;
+      } else if (!faceHasUV && faceHasNormal) {
+        output += `f ${ia}//${ia} ${ib}//${ib} ${ic}//${ic}\n`;
+      } else {
+        output += `f ${ia} ${ib} ${ic}\n`;
+      }
+    };
+
+    if (index) {
+      const idx = index.array;
+      for (let i = 0; i < idx.length; i += 3) {
+        makeFace(idx[i], idx[i + 1], idx[i + 2]);
+      }
+    } else {
+      // Assume triangles
+      for (let i = 0; i < vertCount; i += 3) {
+        makeFace(i, i + 1, i + 2);
+      }
+    }
+
+    vertexOffset += vertCount;
+  });
+
+  return output;
+}
 
 function saveString(text, filename) {
   saveBlob(new Blob([text], { type: 'text/plain' }), filename);

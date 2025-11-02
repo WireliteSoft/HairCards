@@ -23,7 +23,7 @@
           <label class="btn">Hair Texture
             <input id="textureInput" type="file" accept="image/*" />
           </label>
-          <button id="exportBtn" class="btn">Export Hair (GLB)</button>
+          <button id="exportBtn" class="btn">Export…</button>
           <button id="undoBtn" class="btn">Undo</button>
           <a href="texture-generator.html" class="btn" target="_blank" rel="noopener">Texture Generator</a>
           <span class="divider"></span>
@@ -53,6 +53,44 @@
         <div id="cardItems" class="panel-body"></div>
       </div>
     </div>
+
+    <!-- Export dialog -->
+    <dialog id="exportDialog">
+      <form method="dialog" id="exportForm" style="min-width:380px">
+        <h3 style="margin:0 0 8px 0">Export Hair</h3>
+        <div style="font-size:12px; opacity:0.8; margin:0 0 12px 0">Export meshes from the HairCards group.</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:12px;">
+          <label style="display:flex; flex-direction:column; gap:6px; grid-column: span 2;">
+            <span>Format</span>
+            <select id="exportFormat" style="padding:6px; background:#2a2e3f; border:1px solid #3a3f55; color:#e6e6e6; border-radius:6px;">
+              <option value="glb" selected>GLB (glTF Binary)</option>
+              <option value="gltf">GLTF (JSON)</option>
+              <option value="obj">OBJ</option>
+              <option value="fbx">FBX</option>
+            </select>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="exportOnlySelected" />
+            <span>Only selected cards</span>
+          </label>
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="exportOnlyVisible" checked />
+            <span>Only visible</span>
+          </label>
+          <div id="gltfOptions" style="grid-column: span 2; display:flex; align-items:center; gap:8px; margin-top:4px;">
+            <input type="checkbox" id="exportEmbedImages" checked />
+            <span>Embed images (GLTF JSON only)</span>
+          </div>
+          <div id="fbxHint" style="grid-column: span 2; font-size:12px; opacity:0.75; display:none;">
+            FBX export requires <code>vendor/three/examples/jsm/exporters/FBXExporter.js</code>.
+          </div>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
+          <button value="cancel" class="btn" style="margin:0;">Cancel</button>
+          <button id="exportConfirmBtn" value="default" class="btn" style="margin:0;">Export</button>
+        </div>
+      </form>
+    </dialog>
 
     <script type="module" src="js/main.js"></script>
   </body>
