@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Facial Hair Cards Tool</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app">
+      <div id="topbar">
+        <div class="left">
+          <label class="btn">Load Model
+            <input id="modelInput" type="file" accept=".glb,.gltf,.obj,.fbx" />
+          </label>
+          <label class="btn">Hair Texture
+            <input id="textureInput" type="file" accept="image/*" />
+          </label>
+          <button id="exportBtn" class="btn">Export Hair (GLB)</button>
+          <button id="undoBtn" class="btn">Undo</button>
+          <a href="texture-generator.html" class="btn" target="_blank" rel="noopener">Texture Generator</a>
+          <span class="divider"></span>
+          <span class="toggle-group" role="group" aria-label="Transform Mode">
+            <button id="moveModeBtn" class="btn toggle active" title="Move (W)">Move</button>
+            <button id="rotateModeBtn" class="btn toggle" title="Rotate (E)">Rotate</button>
+          </span>
+          <span class="divider"></span>
+          <span class="toggle-group" role="group" aria-label="Placement Mode">
+            <button id="placeModeBtn" class="btn toggle active" title="Place Cards">Place</button>
+            <button id="selectModeBtn" class="btn toggle" title="Select/Edit Cards">Select</button>
+          </span>
+        </div>
+        <div class="right">
+          <span class="hint">LMB: place/select • W/E/R: move/rot/scale • Del: delete</span>
+        </div>
+      </div>
+      <div id="canvas"></div>
+      <div id="sidebar"></div>
+      <div id="cardList" class="panel">
+        <div class="panel-header">
+          <span>Hair Cards</span>
+          <label class="select-all">
+            <input id="selectAllCards" type="checkbox" /> Select All
+          </label>
+        </div>
+        <div id="cardItems" class="panel-body"></div>
+      </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+  </body>
+  </html>

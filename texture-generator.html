@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hair Card Texture Generator</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app">
+      <div id="topbar">
+        <div class="left">
+          <span class="btn" id="downloadBtn">Download PNG</span>
+          <span class="btn" id="copyBtn">Copy To Clipboard</span>
+          <span class="divider"></span>
+          <a class="btn" href="index.html">Back to Tool</a>
+        </div>
+        <div class="right">
+          <span class="hint">Transparent PNG output • Tune params at right</span>
+        </div>
+      </div>
+      <div id="canvas"></div>
+      <div id="sidebar"></div>
+    </div>
+
+    <script type="module" src="js/texgen.js"></script>
+  </body>
+  </html>
+
